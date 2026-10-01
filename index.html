@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="description" content="목표 페이스에서 벗어나면 진동으로 알려 주는 러닝 앱">
+  <meta name="theme-color" content="#16191d">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Running Master Ultimate 4.0</title>
+
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="assets/icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="assets/icons/icon.svg">
+
+  <!-- 숫자용 글꼴은 프로젝트에 포함 (인터넷 데이터 사용 없음) -->
+  <link rel="preload" href="assets/fonts/barlow-condensed-bold.woff" as="font" type="font/woff" crossorigin>
+
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/layout.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/run.css">
+  <link rel="stylesheet" href="css/screens.css">
+
+  <!-- JavaScript 모듈을 한꺼번에 미리 받아 시작 시간을 줄임 (순서대로 하나씩 받지 않도록) -->
+  <link rel="modulepreload" href="src/main.js">
+  <link rel="modulepreload" href="src/app.js">
+  <link rel="modulepreload" href="src/chart/barChart.js">
+  <link rel="modulepreload" href="src/coach/coachMessages.js">
+  <link rel="modulepreload" href="src/coach/coachNotifier.js">
+  <link rel="modulepreload" href="src/coach/paceCoach.js">
+  <link rel="modulepreload" href="src/core/config.js">
+  <link rel="modulepreload" href="src/core/eventBus.js">
+  <link rel="modulepreload" href="src/core/format.js">
+  <link rel="modulepreload" href="src/core/geo.js">
+  <link rel="modulepreload" href="src/core/platform.js">
+  <link rel="modulepreload" href="src/core/serviceWorker.js">
+  <link rel="modulepreload" href="src/core/utils.js">
+  <link rel="modulepreload" href="src/core/wakeLock.js">
+  <link rel="modulepreload" href="src/gps/gpsFilter.js">
+  <link rel="modulepreload" href="src/gps/gpsService.js">
+  <link rel="modulepreload" href="src/gps/gpsSimulator.js">
+  <link rel="modulepreload" href="src/gps/kalmanFilter.js">
+  <link rel="modulepreload" href="src/gps/providers.js">
+  <link rel="modulepreload" href="src/map/leafletLoader.js">
+  <link rel="modulepreload" href="src/map/mapView.js">
+  <link rel="modulepreload" href="src/running/autoPause.js">
+  <link rel="modulepreload" href="src/running/calorieCalculator.js">
+  <link rel="modulepreload" href="src/running/distanceTracker.js">
+  <link rel="modulepreload" href="src/running/lapManager.js">
+  <link rel="modulepreload" href="src/running/paceCalculator.js">
+  <link rel="modulepreload" href="src/running/routeRecorder.js">
+  <link rel="modulepreload" href="src/running/runSession.js">
+  <link rel="modulepreload" href="src/running/runTimer.js">
+  <link rel="modulepreload" href="src/running/speedCalculator.js">
+  <link rel="modulepreload" href="src/stats/statsService.js">
+  <link rel="modulepreload" href="src/storage/activeRunStore.js">
+  <link rel="modulepreload" href="src/storage/backup.js">
+  <link rel="modulepreload" href="src/storage/runRepository.js">
+  <link rel="modulepreload" href="src/storage/safeStorage.js">
+  <link rel="modulepreload" href="src/storage/settingsStore.js">
+  <link rel="modulepreload" href="src/ui/controlBar.js">
+  <link rel="modulepreload" href="src/ui/dom.js">
+  <link rel="modulepreload" href="src/ui/historyScreen.js">
+  <link rel="modulepreload" href="src/ui/modal.js">
+  <link rel="modulepreload" href="src/ui/pocketMode.js">
+  <link rel="modulepreload" href="src/ui/router.js">
+  <link rel="modulepreload" href="src/ui/runDetailView.js">
+  <link rel="modulepreload" href="src/ui/runScreen.js">
+  <link rel="modulepreload" href="src/ui/settingsScreen.js">
+  <link rel="modulepreload" href="src/ui/statsScreen.js">
+  <link rel="modulepreload" href="src/ui/theme.js">
+  <link rel="modulepreload" href="src/ui/toast.js">
+  <link rel="modulepreload" href="src/vibration/vibrationManager.js">
+  <link rel="modulepreload" href="src/voice/voiceManager.js">
+
+  <script>
+    // 저장된 테마를 먼저 적용해 화면 깜빡임 방지
+    (function () {
+      try {
+        var s = JSON.parse(localStorage.getItem('rmu4:settings') || '{}');
+        var t = s && s.display && s.display.theme;
+        if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t);
+      } catch (e) { /* 무시 */ }
+    })();
+  </script>
+</head>
+<body>
+  <!-- file:// 로 열었을 때 안내 (ES Module 은 서버가 필요) -->
+  <div class="file-warning" id="fileWarning" hidden>
+    <h1>Live Server 로 실행해 주세요</h1>
+    <p>이 앱은 JavaScript 모듈을 사용하므로 파일을 직접 열면 동작하지 않습니다.
+      VS Code 에서 <strong>index.html</strong> 을 우클릭한 뒤 <strong>Open with Live Server</strong> 를 선택하세요.</p>
+  </div>
+  <script>
+    if (location.protocol === 'file:') document.getElementById('fileWarning').hidden = false;
+  </script>
+
+  <div class="app" id="app" data-screen="run" data-run-state="idle">
+    <header class="topbar">
+      <div class="brand">
+        <svg class="brand__mark" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="var(--accent)"/><path d="M7 22 L13 10 L17 18 L20 13 L25 22" fill="none" stroke="var(--accent-ink-on)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span class="brand__name">Running Master</span>
+        <span class="brand__ver">Ultimate 4.0</span>
+      </div>
+      <button class="gps-chip" id="gpsChip" type="button" data-state="off" aria-label="GPS 상태 보기">
+        <span class="gps-chip__bars" aria-hidden="true"><i></i><i></i><i></i></span>
+        <span class="gps-chip__text" id="gpsChipText">GPS 꺼짐</span>
+      </button>
+    </header>
+
+    <p class="env-banner" id="envBanner" role="status" hidden></p>
+
+    <main class="screens" id="screens">
+      <!-- ═══════════════ 러닝 ═══════════════ -->
+      <section class="screen screen--run is-active" id="screen-run" data-screen="run" aria-label="러닝">
+        <div class="run-layout">
+          <div class="run-main">
+            <div class="run-state-row">
+              <div class="run-state" id="runState" data-state="idle">
+                <span class="run-state__dot" aria-hidden="true"></span>
+                <span id="runStateText">준비</span>
+              </div>
+              <button class="pocket-btn" id="btnPocket" type="button">
+                <svg class="icon icon--sm" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>
+                화면 끄기 모드
+              </button>
+            </div>
+
+            <!-- ★ 목표 페이스 코치 -->
+            <section class="coach" id="coach" data-zone="idle" aria-label="페이스 코치" aria-live="polite">
+              <div class="coach__head">
+                <button class="coach__target" id="coachTargetBtn" type="button" aria-label="목표 페이스 바꾸기">
+                  <span class="coach__target-label">목표</span>
+                  <span class="coach__target-value num" id="coachTarget">5:30</span><span class="coach__target-unit">/km</span>
+                  <span class="coach__tol" id="coachTolerance">±8초</span>
+                  <svg class="icon icon--sm" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16v4z"/></svg>
+                </button>
+                <span class="coach__diff num" id="coachDiff"></span>
+              </div>
+              <p class="coach__title" id="coachTitle">목표 페이스로 달려 보세요</p>
+              <p class="coach__detail" id="coachDetail">시작하면 목표에서 벗어날 때 진동으로 알려 드립니다</p>
+              <div class="gauge" aria-hidden="true">
+                <div class="gauge__track">
+                  <span class="gauge__zone gauge__zone--fast"></span>
+                  <span class="gauge__zone gauge__zone--on"></span>
+                  <span class="gauge__zone gauge__zone--slow"></span>
+                  <span class="gauge__needle" id="gaugeNeedle" hidden></span>
+                </div>
+                <div class="gauge__labels">
+                  <span>빠름</span>
+                  <span class="num" id="gaugeRange">5:22–5:38</span>
+                  <span>느림</span>
+                </div>
+              </div>
+            </section>
+
+            <section class="hero-metrics" aria-label="거리와 시간">
+              <div class="hero hero--distance">
+                <span class="hero__value num" id="mDistance">0.00</span>
+                <span class="hero__unit">km</span>
+              </div>
+              <div class="hero hero--time">
+                <span class="hero__value num" id="mTime">00:00</span>
+                <span class="hero__unit">시간</span>
+              </div>
+            </section>
+
+            <dl class="metric-grid">
+              <div class="metric metric--key">
+                <dt>현재 페이스</dt>
+                <dd><span class="num" id="mPace">--:--</span><small>/km</small></dd>
+              </div>
+              <div class="metric metric--key">
+                <dt>평균 페이스</dt>
+                <dd><span class="num" id="mAvgPace">--:--</span><small>/km</small></dd>
+              </div>
+              <div class="metric">
+                <dt>현재 속도</dt>
+                <dd><span class="num" id="mSpeed">--.-</span><small>km/h</small></dd>
+              </div>
+              <div class="metric">
+                <dt>평균 속도</dt>
+                <dd><span class="num" id="mAvgSpeed">--.-</span><small>km/h</small></dd>
+              </div>
+              <div class="metric">
+                <dt>칼로리</dt>
+                <dd><span class="num" id="mCalories">0</span><small>kcal</small></dd>
+              </div>
+              <div class="metric">
+                <dt id="mLapLabel">랩 1 페이스</dt>
+                <dd><span class="num" id="mLapPace">--:--</span><small>/km</small></dd>
+              </div>
+            </dl>
+          </div>
+
+          <div class="run-side">
+            <section class="panel map-panel">
+              <div class="map live-map" id="liveMap" role="img" aria-label="러닝 경로 지도"></div>
+              <button class="map-recenter" id="btnRecenter" type="button" hidden>
+                <svg class="icon icon--sm" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg>
+                현재 위치로
+              </button>
+            </section>
+
+            <section class="panel laps-panel" aria-labelledby="lapTitle">
+              <h2 class="panel__title" id="lapTitle">랩 <span class="panel__count num" id="lapCount"></span></h2>
+              <ol class="lap-list" id="lapList"></ol>
+              <p class="empty-hint" id="lapEmpty">설정한 거리마다 자동으로 기록됩니다. 원하는 지점에서 '랩' 버튼을 눌러도 됩니다.</p>
+            </section>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═══════════════ 기록 ═══════════════ -->
+      <section class="screen" id="screen-history" data-screen="history" aria-label="기록" hidden>
+        <header class="screen__header"><h1>기록</h1></header>
+        <div class="history-list" id="historyList"></div>
+        <div class="empty" id="historyEmpty" hidden>
+          <p class="empty__title">아직 기록이 없습니다</p>
+          <p class="empty__text">러닝 탭에서 시작을 누르면 이곳에 기록이 쌓입니다. PC 에서 시험해 보려면 설정에서 GPS 시뮬레이션을 켜세요.</p>
+        </div>
+        <button class="btn btn--ghost btn--block" id="historyMore" type="button" hidden>더 보기</button>
+      </section>
+
+      <!-- ═══════════════ 통계 ═══════════════ -->
+      <section class="screen" id="screen-stats" data-screen="stats" aria-label="통계" hidden>
+        <header class="screen__header"><h1>통계</h1></header>
+
+        <section class="panel goal">
+          <div class="goal__head">
+            <h2 class="panel__title" id="goalMonth">이번 달</h2>
+            <button class="link-btn" id="goalEdit" type="button">목표 바꾸기</button>
+          </div>
+          <p class="goal__value">
+            <span class="num goal__done" id="goalDistance">0.0</span>
+            <span class="goal__of">/ <span class="num" id="goalTarget">100</span> km</span>
+          </p>
+          <div class="progress" id="goalProgress" role="progressbar" aria-label="월간 목표 달성률" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+            <div class="progress__bar" id="goalBar"></div>
+          </div>
+          <p class="goal__note" id="goalNote"></p>
+        </section>
+
+        <dl class="totals">
+          <div class="total"><dt>총 러닝</dt><dd><span class="num" id="statRuns">0</span><small>회</small></dd></div>
+          <div class="total"><dt>총 거리</dt><dd><span class="num" id="statDistance">0.0</span><small>km</small></dd></div>
+          <div class="total"><dt>총 시간</dt><dd><span id="statTime">0분</span></dd></div>
+          <div class="total"><dt>총 칼로리</dt><dd><span class="num" id="statCalories">0</span><small>kcal</small></dd></div>
+          <div class="total total--wide"><dt>전체 평균 페이스</dt><dd><span class="num" id="statAvgPace">--:--</span><small>/km</small></dd></div>
+        </dl>
+
+        <section class="panel chart-panel">
+          <div class="chart-head">
+            <h2 class="panel__title" id="chartTitle">이번 달 일별 거리</h2>
+            <div class="segmented" role="group" aria-label="그래프 기간">
+              <button type="button" data-range="daily" aria-pressed="true">일별</button>
+              <button type="button" data-range="weekly" aria-pressed="false">주별</button>
+              <button type="button" data-range="monthly" aria-pressed="false">월별</button>
+            </div>
+          </div>
+          <canvas class="chart-canvas" id="distanceChart" role="img" aria-label="거리 막대 그래프. 막대를 누르면 값이 표시됩니다."></canvas>
+          <table class="sr-only" id="chartTable"></table>
+        </section>
+
+        <section class="panel">
+          <h2 class="panel__title">개인 기록</h2>
+          <ul class="record-list" id="recordList"></ul>
+        </section>
+      </section>
+
+      <!-- ═══════════════ 설정 ═══════════════ -->
+      <section class="screen" id="screen-settings" data-screen="settings" aria-label="설정" hidden>
+        <header class="screen__header"><h1>설정</h1></header>
+
+        <section class="settings-group" aria-labelledby="sgCoach">
+          <h2 class="settings-group__title" id="sgCoach">페이스 코치</h2>
+
+          <div class="settings-card">
+          <div class="setting">
+            <div class="setting__text">
+              <label class="setting__label" for="setCoachEnabled">페이스 코치 사용</label>
+              <p class="setting__desc">목표 페이스에서 벗어나면 진동과 음성으로 알려 줍니다.</p>
+            </div>
+            <label class="switch"><input id="setCoachEnabled" type="checkbox" data-setting="coach.enabled"><span class="switch__track" aria-hidden="true"></span></label>
+          </div>
+
+          <div class="setting" data-depends="coach.enabled">
+            <div class="setting__text">
+              <label class="setting__label" for="setTargetPace">목표 페이스</label>
+              <p class="setting__desc">분:초 형식, 예: 5:30</p>
+              <p class="field-error" data-error-for="coach.targetPaceSec" hidden></p>
+            </div>
+            <div class="field-inline">
+              <input class="input input--pace num" id="setTargetPace" type="text" inputmode="decimal" autocomplete="off" maxlength="8" data-setting-pace="coach.targetPaceSec">
+              <span class="field-unit">/km</span>
+            </div>
+          </div>
+
+          <div class="setting" data-depends="coach.enabled">
+            <div class="setting__text">
+              <label class="setting__label" for="setTolerance">허용 오차</label>
+              <p class="setting__desc" id="tolExample"></p>
+              <p class="field-error" data-error-for="coach.toleranceSec" hidden></p>
+            </div>
+            <div class="field-inline">
+              <span class="field-unit">±</span>
+              <input class="input input--short num" id="setTolerance" type="number" inputmode="numeric" min="3" max="30" step="1" data-setting="coach.toleranceSec">
+              <span class="field-unit">초</span>
+            </div>
+          </div>
+
+          <div class="setting" data-depends="coach.enabled">
+            <div class="setting__text">
+              <label class="setting__label" for="setCooldown">같은 알림 반복 간격</label>
+              <p class="setting__desc">알림 후 이 시간 동안은 같은 종류의 알림을 다시 울리지 않습니다.</p>
+            </div>
+            <select class="select" id="setCooldown" data-setting="coach.cooldownSec">
+              <option value="20">20초</option>
+              <option value="25">25초</option>
+              <option value="30">30초</option>
+              <option value="45">45초</option>
+              <option value="60">60초</option>
+            </select>
+          </div>
+
+          <div class="setting" data-depends="coach.enabled">
+            <div class="setting__text">
+              <label class="setting__label" for="setRepeat">계속 벗어나 있으면 다시 알림</label>
+              <p class="setting__desc">끄면 목표 범위로 돌아왔다가 다시 벗어날 때만 알립니다.</p>
+            </div>
+            <label class="switch"><input id="setRepeat" type="checkbox" data-setting="coach.repeatWhileOff"><span class="switch__track" aria-hidden="true"></span></label>
+          </div>
+
+          <div class="setting" data-depends="coach.enabled">
+            <div class="setting__text">
+              <label class="setting__label" for="setAlertFast">너무 빠를 때도 알림</label>
+              <p class="setting__desc">짧은 진동 한 번과 "페이스를 조금 낮추세요" 안내</p>
+            </div>
+            <label class="switch"><input id="setAlertFast" type="checkbox" data-setting="coach.alertFast"><span class="switch__track" aria-hidden="true"></span></label>
+          </div>
+
+          <div class="setting">
+            <div class="setting__text">
+              <label class="setting__label" for="setVibration">진동</label>
+              <p class="setting__desc">느릴 때 길게 두 번, 빠를 때 짧게 한 번 울립니다.</p>
+            </div>
+            <div class="setting__controls">
+              <button class="btn btn--small btn--ghost" type="button" data-action="testVibration">시험</button>
+              <label class="switch"><input id="setVibration" type="checkbox" data-setting="coach.vibration"><span class="switch__track" aria-hidden="true"></span></label>
+            </div>
+          </div>
+
+          <div class="setting">
+            <div class="setting__text">
+              <label class="setting__label" for="setVoice">음성 안내</label>
+              <p class="setting__desc">"페이스를 조금 올리세요" 같은 안내와 랩·시작·종료 안내</p>
+            </div>
+            <div class="setting__controls">
+              <button class="btn btn--small btn--ghost" type="button" data-action="testVoice">시험</button>
+              <label class="switch"><input id="setVoice" type="checkbox" data-setting="coach.voice"><span class="switch__track" aria-hidden="true"></span></label>
+            </div>
+          </div>
+
+          <div class="setting" data-depends="coach.voice">
+            <div class="setting__text">
+              <label class="setting__label" for="setVoiceRecovered">목표 복귀 안내</label>
+              <p class="setting__desc">알림 후 목표 범위로 돌아오면 "좋아요. 목표 페이스입니다"</p>
+            </div>
+            <label class="switch"><input id="setVoiceRecovered" type="checkbox" data-setting="coach.voiceRecovered"><span class="switch__track" aria-hidden="true"></span></label>
+          </div>
+          </div>
+        </section>
+
+        <section class="settings-group" aria-labelledby="sgRun">
+          <h2 class="settings-group__title" id="sgRun">러닝</h2>
+
+          <div class="settings-card">
+          <div class="setting">
+            <div class="setting__text">
+              <label class="setting__label" for="setAutoPause">Auto Pause</label>
+              <p class="setting__desc">멈추면 자동으로 일시정지하고, 다시 달리면 자동으로 재개합니다. GPS 신호가 약할 때는 판단하지 않습니다.</p>
+            </div>
+            <label class="switch"><input id="setAutoPause" type="checkbox" data-setting="run.autoPause"><span class="switch__track" aria-hidden="true"></span></label>
+          </div>
+
+          <div class="setting">
+            <div class="setting__text">
+              <label class="setting__label" for="setAutoLap">자동 랩</label>
+            </div>
+            <select class="select" id="setAutoLap" data-setting="run.autoLapKm">
+              <option value="0">끄기</option>
+              <option value="0.5">0.5 km</option>
+              <option value="1">1 km</option>
+              <option value="2">2 km</option>
+              <option value="5">5 km</option>
+            </select>
+          </div>
+
+          <div class="setting">
+            <div class="setting__text">
+              <label class="setting__label" for="setLapVoice">랩 음성 안내</label>
+            </div>
+            <label class="switch"><input id="setLapVoice" type="checkbox" data-setting="run.lapVoice"><span class="switch__track" aria-hidden="true"></span></label>
+          </div>
+
+          <div class="setting">
+            <div class="setting__text">
+              <label class="setting__label" for="setPaceWindow">현재 페이스 계산 구간</label>
+              <p class="setting__desc">짧을수록 빠르게 반응하고, 길수록 안정적입니다.</p>
+            </div>
+            <select class="select" id="setPaceWindow" data-setting="run.paceWindowSec">
+              <option value="10">최근 10초</option>
+              <option value="20">최근 20초</option>
+              <option value="30">최근 30초</option>
+            </select>
+          </div>
+          </div>
+        </section>
+
+        <section class="settings-group" aria-labelledby="sgUser">
+          <h2 class="settings-group__title" id="sgUser">내 정보</h2>
+          <div class="settings-card">
+          <div class="setting">
+            <div class="setting__text">
+              <label class="setting__label" for="setWeight">체중</label>
+              <p class="setting__desc">칼로리 계산에 사용합니다.</p>
+              <p class="field-error" data-error-for="user.weightKg" hidden></p>
+            </div>
+            <div class="field-inline">
+              <input class="input input--short num" id="setWeight" type="number" inputmode="decimal" min="20" max="300" step="0.1" data-setting="user.weightKg">
+              <span class="field-unit">kg</span>
+            </div>
+          </div>
+          <div class="setting">
+            <div class="setting__text">
+              <label class="setting__label" for="setGoal">월간 목표 거리</label>
+              <p class="field-error" data-error-for="user.monthlyGoalKm" hidden></p>
+            </div>
+            <div class="field-inline">
+              <input class="input input--short num" id="setGoal" type="number" inputmode="numeric" min="1" max="2000" step="1" data-setting="user.monthlyGoalKm">
+              <span class="field-unit">km</span>
+            </div>
+          </div>
+          </div>
+        </section>
+
+        <section class="settings-group" aria-labelledby="sgDisplay">
+          <h2 class="settings-group__title" id="sgDisplay">화면</h2>
+          <div class="settings-card">
+          <div class="setting">
+            <div class="setting__text">
+              <label class="setting__label" for="setTheme">테마</label>
+            </div>
+            <select class="select" id="setTheme" data-setting="display.theme">
+              <option value="system">시스템 설정 따름</option>
+              <option value="light">라이트</option>
+              <option value="dark">다크</option>
+            </select>
+          </div>
+          <div class="setting">
+            <div class="setting__text">
+              <label class="setting__label" for="setKeepAwake">러닝 중 화면 켜 두기</label>
+              <p class="setting__desc">전원 버튼으로 화면이 꺼지면 브라우저가 GPS 와 진동을 멈춥니다. 꼭 켜 두세요.</p>
+            </div>
+            <label class="switch"><input id="setKeepAwake" type="checkbox" data-setting="display.keepAwake"><span class="switch__track" aria-hidden="true"></span></label>
+          </div>
+          <div class="setting">
+            <div class="setting__text">
+              <label class="setting__label" for="setPocketAuto">시작 10초 뒤 화면 끄기 모드</label>
+              <p class="setting__desc">화면을 검게 하고 터치를 잠급니다. GPS·진동·음성은 계속 동작합니다. 가운데 원을 길게 누르면 돌아옵니다.</p>
+            </div>
+            <label class="switch"><input id="setPocketAuto" type="checkbox" data-setting="display.pocketAuto"><span class="switch__track" aria-hidden="true"></span></label>
+          </div>
+          </div>
+        </section>
+
+        <section class="settings-group" aria-labelledby="sgSaver">
+          <h2 class="settings-group__title" id="sgSaver">데이터 절약</h2>
+          <div class="settings-card">
+          <div class="setting">
+            <div class="setting__text">
+              <label class="setting__label" for="setTiles">지도 배경 이미지</label>
+              <p class="setting__desc">인터넷 데이터는 대부분 지도 배경에 쓰입니다. 받지 않아도 경로 선은 그대로 그려집니다.</p>
+            </div>
+            <select class="select" id="setTiles" data-setting="map.tiles">
+              <option value="saver">러닝 중엔 끄기</option>
+              <option value="off">항상 끄기</option>
+              <option value="always">항상 받기</option>
+            </select>
+          </div>
+          <div class="setting">
+            <div class="setting__text">
+              <span class="setting__label">저장된 지도 이미지</span>
+              <p class="setting__desc" id="tileCacheInfo">한 번 받은 지도는 저장해 두고 다시 받지 않습니다.</p>
+            </div>
+            <button class="btn btn--small btn--ghost" type="button" data-action="clearTileCache">비우기</button>
+          </div>
+          </div>
+        </section>
+
+        <section class="settings-group" aria-labelledby="sgGps">
+          <h2 class="settings-group__title" id="sgGps">GPS</h2>
+          <div class="settings-card">
+          <div class="setting">
+            <div class="setting__text">
+              <label class="setting__label" for="setAccuracy">위치 정확도 기준</label>
+              <p class="setting__desc">이보다 부정확한 위치는 거리 계산에서 제외합니다.</p>
+            </div>
+            <select class="select" id="setAccuracy" data-setting="gps.maxAccuracyM">
+              <option value="15">±15 m (엄격)</option>
+              <option value="20">±20 m</option>
+              <option value="30">±30 m (권장)</option>
+              <option value="50">±50 m (느슨)</option>
+            </select>
+          </div>
+          <div class="setting">
+            <div class="setting__text">
+              <span class="setting__label">현재 위치 확인</span>
+              <p class="setting__desc">위치 권한을 요청하고 GPS 정확도를 확인합니다.</p>
+            </div>
+            <button class="btn btn--small btn--ghost" type="button" data-action="checkLocation">확인</button>
+          </div>
+          <div class="setting">
+            <div class="setting__text">
+              <label class="setting__label" for="setSim">GPS 시뮬레이션 (테스트용)</label>
+              <p class="setting__desc">PC 에서도 가상의 러너로 모든 기능을 시험할 수 있습니다. 러닝 중에는 바뀌지 않습니다.</p>
+            </div>
+            <label class="switch"><input id="setSim" type="checkbox" data-setting="gps.simulation"><span class="switch__track" aria-hidden="true"></span></label>
+          </div>
+          <div class="setting" data-depends="gps.simulation">
+            <div class="setting__text">
+              <label class="setting__label" for="setSimScenario">시뮬레이션 시나리오</label>
+              <p class="setting__desc">코치 시연: 목표 유지 → 느려짐 → 복귀 → 빨라짐 → 정지(Auto Pause)를 반복합니다.</p>
+            </div>
+            <select class="select" id="setSimScenario" data-setting="gps.simScenario">
+              <option value="coach-demo">코치 시연</option>
+              <option value="steady">일정한 페이스</option>
+            </select>
+          </div>
+          <div class="setting" data-depends="gps.simulation">
+            <div class="setting__text">
+              <label class="setting__label" for="setSimPace">일정한 페이스 값</label>
+              <p class="field-error" data-error-for="gps.simPaceSec" hidden></p>
+            </div>
+            <div class="field-inline">
+              <input class="input input--pace num" id="setSimPace" type="text" inputmode="decimal" autocomplete="off" maxlength="8" data-setting-pace="gps.simPaceSec">
+              <span class="field-unit">/km</span>
+            </div>
+          </div>
+          </div>
+        </section>
+
+        <section class="settings-group" aria-labelledby="sgData">
+          <h2 class="settings-group__title" id="sgData">데이터</h2>
+          <p class="settings-group__note" id="storageUsage"></p>
+          <div class="settings-card">
+          <div class="setting">
+            <div class="setting__text">
+              <span class="setting__label">백업 파일 내려받기</span>
+              <p class="setting__desc">브라우저 데이터를 지우면 기록도 사라지므로 가끔 백업해 두세요.</p>
+            </div>
+            <button class="btn btn--small btn--ghost" type="button" data-action="exportData">내려받기</button>
+          </div>
+          <div class="setting">
+            <div class="setting__text">
+              <span class="setting__label">백업 파일 가져오기</span>
+            </div>
+            <button class="btn btn--small btn--ghost" type="button" data-action="importClick">파일 선택</button>
+            <input type="file" id="importFile" accept="application/json,.json" hidden>
+          </div>
+          <div class="setting">
+            <div class="setting__text">
+              <span class="setting__label">설정 초기화</span>
+            </div>
+            <button class="btn btn--small btn--ghost" type="button" data-action="resetSettings">초기화</button>
+          </div>
+          <div class="setting">
+            <div class="setting__text">
+              <span class="setting__label">모든 기록 삭제</span>
+            </div>
+            <button class="btn btn--small btn--danger-ghost" type="button" data-action="clearData">삭제</button>
+          </div>
+          </div>
+        </section>
+
+        <section class="settings-group" aria-labelledby="sgDiag">
+          <h2 class="settings-group__title" id="sgDiag">이 기기에서 쓸 수 있는 기능</h2>
+          <ul class="diag-list" id="diagList"></ul>
+        </section>
+
+        <p class="app-info">Running Master Ultimate 4.0<br>지도 데이터 © OpenStreetMap, © CARTO</p>
+      </section>
+    </main>
+
+    <!-- 러닝 조작 버튼 -->
+    <div class="control-bar" id="controlBar" data-state="idle">
+      <button class="btn btn--start" id="btnStart" type="button">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z" fill="currentColor" stroke="none"/></svg>
+        시작
+      </button>
+      <button class="btn btn--pause" id="btnPause" type="button">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14M16 5v14"/></svg>
+        일시정지
+      </button>
+      <button class="btn btn--lap" id="btnLap" type="button">랩</button>
+      <button class="btn btn--resume" id="btnResume" type="button">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z" fill="currentColor" stroke="none"/></svg>
+        재개
+      </button>
+      <button class="btn btn--finish" id="btnFinish" type="button" aria-label="종료 (길게 누르기)">
+        <span class="hold-fill" aria-hidden="true"></span>
+        <span class="btn__label">길게 눌러 종료</span>
+      </button>
+    </div>
+
+    <nav class="tabbar" role="tablist" aria-label="화면">
+      <button class="tab" id="tab-run" role="tab" type="button" data-target="run" aria-selected="true" aria-controls="screen-run">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19c4-1 5-6 8-7s5 1 8-6"/><circle cx="4" cy="19" r="1.6"/><circle cx="20" cy="6" r="1.6"/></svg>
+        <span>러닝</span>
+      </button>
+      <button class="tab" id="tab-history" role="tab" type="button" data-target="history" aria-selected="false" aria-controls="screen-history" tabindex="-1">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11M4.5 6h.01M4.5 12h.01M4.5 18h.01"/></svg>
+        <span>기록</span>
+      </button>
+      <button class="tab" id="tab-stats" role="tab" type="button" data-target="stats" aria-selected="false" aria-controls="screen-stats" tabindex="-1">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 20v-8M12 20V4M19 20v-11"/></svg>
+        <span>통계</span>
+      </button>
+      <button class="tab" id="tab-settings" role="tab" type="button" data-target="settings" aria-selected="false" aria-controls="screen-settings" tabindex="-1">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h9M18 7h2M4 17h3M11 17h9"/><circle cx="15.5" cy="7" r="2.2"/><circle cx="8.5" cy="17" r="2.2"/></svg>
+        <span>설정</span>
+      </button>
+    </nav>
+  </div>
+
+  <!-- 기록 상세 -->
+  <div class="sheet" id="runDetail" role="dialog" aria-modal="true" aria-labelledby="detailTitle" hidden>
+    <header class="sheet__header">
+      <button class="icon-btn" id="detailBack" type="button" aria-label="뒤로">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
+      </button>
+      <h1 class="sheet__title" id="detailTitle"></h1>
+      <button class="icon-btn icon-btn--danger" id="detailDelete" type="button" aria-label="이 기록 삭제">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14M10 7V4.5h4V7M7 7l1 13h8l1-13"/></svg>
+      </button>
+    </header>
+    <div class="sheet__body" id="detailBody"></div>
+  </div>
+
+  <!-- 화면 끄기 모드: 검은 화면 + 터치 잠금 (앱은 계속 실행) -->
+  <div class="pocket" id="pocket" hidden>
+    <div class="pocket__info" id="pocketInfo" aria-hidden="true">
+      <span class="num" id="pocketDistance">0.00</span><small>km</small>
+      <span class="num" id="pocketTime">00:00</span>
+    </div>
+    <button class="pocket__unlock" id="pocketUnlock" type="button" aria-label="길게 눌러 화면 켜기">
+      <svg class="pocket__ring" viewBox="0 0 100 100" aria-hidden="true">
+        <circle cx="50" cy="50" r="44" class="pocket__ring-track"/>
+        <circle cx="50" cy="50" r="44" class="pocket__ring-fill" pathLength="100"/>
+      </svg>
+      <span class="pocket__hint">길게 눌러<br>화면 켜기</span>
+    </button>
+  </div>
+
+  <div class="toast-host" id="toastHost" aria-live="polite"></div>
+  <div id="modalHost"></div>
+
+  <div class="fatal" id="fatal" role="alert" hidden>
+    <h1>앱을 시작하지 못했습니다</h1>
+    <p data-fatal-message></p>
+    <p>VS Code 의 Live Server 로 실행했는지 확인한 뒤 새로고침해 주세요.</p>
+    <button class="btn btn--primary" type="button" onclick="location.reload()">새로고침</button>
+  </div>
+
+  <noscript>
+    <p class="file-warning">이 앱을 사용하려면 JavaScript 를 켜 주세요.</p>
+  </noscript>
+
+  <script type="module" src="src/main.js"></script>
+  <script>
+    // 모듈 파일을 하나라도 불러오지 못하면 main.js 가 실행되지 않으므로, 여기서 안내
+    window.addEventListener('load', function () {
+      setTimeout(function () {
+        if (window.__RMU__ || location.protocol === 'file:') return;
+        var box = document.getElementById('fatal');
+        box.hidden = false;
+        box.querySelector('[data-fatal-message]').textContent =
+          '앱 파일(JavaScript)을 불러오지 못했습니다. 폴더 구조가 바뀌지 않았는지, 개발자 도구(F12) 콘솔에 오류가 없는지 확인하세요.';
+      }, 4000);
+    });
+  </script>
+</body>
+</html>
