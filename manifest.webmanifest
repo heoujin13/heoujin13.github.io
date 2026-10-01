@@ -1,0 +1,16 @@
+{
+  "name": "Running Master Ultimate 4.0",
+  "short_name": "Running Master",
+  "description": "목표 페이스에서 벗어나면 진동으로 알려 주는 러닝 앱",
+  "lang": "ko",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#15181c",
+  "theme_color": "#15181c",
+  "icons": [
+    { "src": "assets/icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "assets/icons/icon-maskable.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" }
+  ]
+}
