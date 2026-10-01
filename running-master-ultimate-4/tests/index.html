@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Running Master 테스트</title>
+  <style>
+    body { font-family: -apple-system, "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif; margin: 24px; max-width: 760px; line-height: 1.5; }
+    h1 { font-size: 22px; }
+    #summary { font-weight: 700; font-size: 18px; margin: 12px 0; }
+    li { padding: 4px 0; border-bottom: 1px solid #ddd; list-style: none; }
+    .ok::before { content: "✓ "; color: #11804b; font-weight: 700; }
+    .fail::before { content: "✗ "; color: #c22c2c; font-weight: 700; }
+    .fail small { display: block; color: #c22c2c; margin-left: 1.4em; }
+    ul { padding: 0; }
+  </style>
+</head>
+<body>
+  <h1>Running Master Ultimate 4.0 — 핵심 로직 테스트</h1>
+  <p>페이스 코치, GPS 필터, 거리·시간·페이스, 랩, Auto Pause, 저장소를 검증합니다.</p>
+  <p id="summary">실행 중…</p>
+  <ul id="results"></ul>
+  <script type="module">
+    import { runAll } from './suite.js';
+    const list = document.getElementById('results');
+    const { total, passed, failed } = await runAll(({ name, ok, error }) => {
+      const li = document.createElement('li');
+      li.className = ok ? 'ok' : 'fail';
+      li.textContent = name;
+      if (!ok) {
+        const s = document.createElement('small');
+        s.textContent = error;
+        li.append(s);
+      }
+      list.append(li);
+    });
+    document.getElementById('summary').textContent = `${passed}/${total} 통과${failed ? `, ${failed} 실패` : ''}`;
+  </script>
+</body>
+</html>
